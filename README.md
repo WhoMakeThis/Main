@@ -1,9 +1,9 @@
 # 🧠 AI CAPTCHA 웹 애플리케이션
 
-# 가상환경 설정 및 패키지 설
+# 가상환경 설정 및 패키지 설치
 python -m venv venv
-venv\Scripts\activate           # Windows
-source venv/bin/activate      # Mac/Linux
+venv\Scripts\activate            Windows
+source venv/bin/activate       Mac/Linux
 
 pip install -r requirements.txt
 
