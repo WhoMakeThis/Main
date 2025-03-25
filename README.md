@@ -1,3 +1,5 @@
+# 🧠 AI CAPTCHA 웹 애플리케이션
+
 # 가상환경 설정 및 패키지 설
 python -m venv venv
 venv\Scripts\activate           # Windows
