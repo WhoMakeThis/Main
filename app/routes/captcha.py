@@ -23,7 +23,7 @@ def create_captcha(text):
     width, height = 150, 50
     img = Image.new('RGB', (width, height), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype("arial.ttf", 36)
+    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 36)
 
     # 🔹 글자마다 회전 + 위치 흔들기
     x = 5
