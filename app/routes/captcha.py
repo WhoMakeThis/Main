@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, session
 import random, string, os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from uuid import uuid4
+from datetime import datetime
 
 captcha_bp = Blueprint("captcha", __name__)
 CAPTCHA_FOLDER = "app/static/captcha/"
@@ -83,6 +84,7 @@ def generate_captcha():
     filename = create_captcha(text)
 #   return jsonify({"captcha_url": f"/static/captcha/{filename}", "text": text})
     session["captcha_answer"] = text  # 정답은 서버 세션에 저장
+    session["captcha_start_time"] = datetime.now().isoformat() # 응답 시간 분석
     return jsonify({"captcha_url": f"/static/captcha/{filename}"})
 
 
@@ -92,6 +94,17 @@ def verify_captcha():
     user_input = data.get("user_input")
 #   correct_text = data.get("correct_text")
     correct_text = session.get("captcha_answer")
+
+    # 응답 시간 1초 미만이면 봇 판단
+    start_time_str = session.get("captcha_start_time")
+    if start_time_str:
+        start_time = datetime.fromisoformat(start_time_str)
+        elapsed = (datetime.now() - start_time).total_seconds()
+    else:
+        elapsed = None
+
+    if elapsed is not None and elapsed < 1.0:
+        return jsonify({"success": False, "message": "⚠ 응답 시간이 너무 빨라 차단되었습니다."})
 
     if user_input and correct_text and user_input.upper() == correct_text:
         return jsonify({"success": True, "message": "CAPTCHA 인증 성공!"})

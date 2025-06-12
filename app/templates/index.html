@@ -49,7 +49,7 @@
   </div>
 
   <script>
-    async function loadCaptcha() {
+      async function loadCaptcha(clearMessage = true) {
       const res = await fetch("/api/captcha/generate");
       const data = await res.json();
       document.getElementById("captcha-img").src = data.captcha_url;
@@ -57,30 +57,91 @@
       // 보안을 위해 실제 프로젝트에서는 아래 줄은 제거하고, 서버 세션 방식으로 전환해야 함.
       //document.getElementById("captcha-img").dataset.answer = data.text;
 
-      document.getElementById("result").innerText = "";
+      // document.getElementById("result").innerText = "";
+      // 인증 실패 시 실패 메시지 유지
+      if (clearMessage){
+        document.getElementById("result").innerText = "";
+      }
       document.getElementById("user-input").value = "";
+      userActive = false;
+      mousePath = [];
+    }
+
+    let mousePath = [];
+    let userActive = false;
+
+    document.addEventListener("mousemove", (e) => {
+      userActive = true;
+      mousePath.push({ x: e.clientX, y: e.clientY, t: Date.now() })
+    });
+
+    function getMousePathDistance() {
+      let total = 0;
+      for (let i=1; i < mousePath.length; i++) {
+        const dx = mousePath[i].x - mousePath[i - 1].x;
+        const dy = mousePath[i].y - mousePath[i - 1].y;
+        total += Math.sqrt(dx * dx + dy * dy);
+      }
+      const dx = mousePath[mousePath.length - 1].x - mousePath[0].x;
+      const dy = mousePath[mousePath.length - 1].y - mousePath[0].y;
+      const straight = Math.sqrt(dx * dx + dy * dy);
+      return { total, straight };
     }
 
     async function verifyCaptcha() {
       const input = document.getElementById("user-input").value;
-      const answer = document.getElementById("captcha-img").dataset.answer;
+      // const answer = document.getElementById("captcha-img").dataset.answer;
+      
+      // 👇 사용자 활동 탐지
+      if (!userActive) {
+        document.getElementById("result").innerText = "❌ 사용자 활동이 감지되지 않았습니다.";
+        return;
+      }
+
+      // 👇 마우스 궤적이 너무 직선이면 봇 가능성 ↑
+      const { total, straight } = getMousePathDistance();
+      const deviation = total - straight;
+      if (deviation < 20) {
+        document.getElementById("result").innerText = "❌ 비정상적인 마우스 궤적이 감지되었습니다.";
+        return;
+      }      
 
       const res = await fetch("/api/captcha/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        //body: JSON.stringify({ user_input: input, correct_text: answer })
+        //body: JSON.stringify({ user_input: input, correct_text: answer }) # 정답 노출 제거
         body: JSON.stringify({ user_input: input})
       });
 
       const result = await res.json();
       document.getElementById("result").innerText = result.message;
-
+      
+      // 인증 실패 시 이미지 로딩 딜레이 (2초 유지)
       if (!result.success) {
-        loadCaptcha();
+        setTimeout(() => {
+          loadCaptcha(false);
+        }, 2000);
       }
     }
 
-    window.onload = loadCaptcha;
+    window.onload = () => {
+      if (navigator.webdriver) {
+        const resultBox = document.getElementById("result");
+        if (resultBox) {
+          resultBox.innerText = "❌ 자동화 브라우저(WebDriver)가 감지되었습니다.";
+        }
+
+        const button = document.querySelector("button[onclick='verifyCaptcha()']");
+        if (button) {
+          button.disabled = true;
+        }
+
+        return;  // 자동화 브라우저는 CAPTCHA 불러오기 중단
+      }
+
+      // 일반 사용자면 CAPTCHA 로드
+      loadCaptcha();
+    };
   </script>
 </body>
 </html>
