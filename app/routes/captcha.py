@@ -1,9 +1,13 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, session
 import random, string, os
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from uuid import uuid4
 
 captcha_bp = Blueprint("captcha", __name__)
 CAPTCHA_FOLDER = "app/static/captcha/"
+# font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+# 폰트를 static/fonts/ 에 저장, os로 폰트 경로 지정
+font_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static", "fonts", "DejaVuSans-Bold.ttf"))
 
 def generate_random_text(length=5):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -23,8 +27,8 @@ def create_captcha(text):
     width, height = 150, 50
     img = Image.new('RGB', (width, height), color=(255, 255, 255))
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 36)
-
+    font = ImageFont.truetype(font_path, 36)
+    
     # 🔹 글자마다 회전 + 위치 흔들기
     x = 5
     for char in text:
@@ -59,7 +63,15 @@ def create_captcha(text):
     # 🔹 블러 필터(선택)
     img = img.filter(ImageFilter.GaussianBlur(radius=1))
 
-    filename = f"{text}.png"
+#    파일명에 정답 노출
+#    filename = f"{text}.png"
+#    path = os.path.join(CAPTCHA_FOLDER, filename)
+#    img.save(path)
+#
+#    return filename
+
+    # 파일명 uuid로 저장
+    filename = f"{uuid4().hex}.png"
     path = os.path.join(CAPTCHA_FOLDER, filename)
     img.save(path)
 
@@ -69,13 +81,17 @@ def create_captcha(text):
 def generate_captcha():
     text = generate_random_text()
     filename = create_captcha(text)
-    return jsonify({"captcha_url": f"/static/captcha/{filename}", "text": text})
+#   return jsonify({"captcha_url": f"/static/captcha/{filename}", "text": text})
+    session["captcha_answer"] = text  # 정답은 서버 세션에 저장
+    return jsonify({"captcha_url": f"/static/captcha/{filename}"})
+
 
 @captcha_bp.route("/verify", methods=["POST"])
 def verify_captcha():
     data = request.json
     user_input = data.get("user_input")
-    correct_text = data.get("correct_text")
+#   correct_text = data.get("correct_text")
+    correct_text = session.get("captcha_answer")
 
     if user_input and correct_text and user_input.upper() == correct_text:
         return jsonify({"success": True, "message": "CAPTCHA 인증 성공!"})
