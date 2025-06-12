@@ -55,7 +55,7 @@
       document.getElementById("captcha-img").src = data.captcha_url;
 
       // 보안을 위해 실제 프로젝트에서는 아래 줄은 제거하고, 서버 세션 방식으로 전환해야 함.
-      document.getElementById("captcha-img").dataset.answer = data.text;
+      //document.getElementById("captcha-img").dataset.answer = data.text;
 
       document.getElementById("result").innerText = "";
       document.getElementById("user-input").value = "";
@@ -68,7 +68,8 @@
       const res = await fetch("/api/captcha/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_input: input, correct_text: answer })
+        //body: JSON.stringify({ user_input: input, correct_text: answer })
+        body: JSON.stringify({ user_input: input})
       });
 
       const result = await res.json();
